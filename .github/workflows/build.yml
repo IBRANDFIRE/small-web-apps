@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       zip_name:
-        description: 'Zip file name (e.g. editor.zip)'
+        description: 'Zip file name (e.g. Cube.zip)'
         required: true
         default: 'Cube.zip'
 
