@@ -26,7 +26,7 @@ jobs:
           
           # Fallback for automatic push triggers when inputs are empty
           if [ -z "$TARGET_ZIP" ]; then
-            TARGET_ZIP="editor.zip"
+            TARGET_ZIP="Cube.zip"
           fi
 
           if [ ! -f "$TARGET_ZIP" ]; then
