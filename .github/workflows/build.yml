@@ -1,0 +1,77 @@
+name: Build Single HTML Bundle
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+    inputs:
+      zip_name:
+        description: 'Zip file name (e.g. editor.zip)'
+        required: true
+        default: 'Cube.zip'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Find and Unzip source file
+        run: |
+          TARGET_ZIP="${{ github.event.inputs.zip_name }}"
+          
+          # Fallback for automatic push triggers when inputs are empty
+          if [ -z "$TARGET_ZIP" ]; then
+            TARGET_ZIP="editor.zip"
+          fi
+
+          if [ ! -f "$TARGET_ZIP" ]; then
+            echo "Error: Could not find file named '$TARGET_ZIP'!"
+            exit 1
+          fi
+
+          echo "Unzipping $TARGET_ZIP..."
+          unzip -o "$TARGET_ZIP" -d .
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies & SingleFile plugin
+        run: |
+          npm install
+          npm install -D vite-plugin-singlefile
+
+      - name: Inject SingleFile plugin into Vite config
+        run: |
+          node -e '
+          const fs = require("fs");
+          const configFile = fs.existsSync("vite.config.ts") ? "vite.config.ts" : "vite.config.js";
+          if (fs.existsSync(configFile)) {
+            let content = fs.readFileSync(configFile, "utf8");
+            if (!content.includes("vite-plugin-singlefile")) {
+              content = `import { viteSingleFile } from "vite-plugin-singlefile";\n` + content;
+              content = content.replace(/plugins:\s*\[/, "plugins: [viteSingleFile(), ");
+              fs.writeFileSync(configFile, content);
+            }
+          }
+          '
+
+      - name: Build Single HTML
+        run: npx vite build
+
+      - name: Prepare Bundle
+        run: |
+          mkdir output
+          cp dist/index.html output/standalone-app.html
+
+      - name: Upload Single HTML Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: single-html-bundle
+          path: output/standalone-app.html
